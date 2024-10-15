@@ -18,25 +18,23 @@ const TicketListItem: React.FC<ListItemProps> = ({data, selectedId, onClick}) =>
         //Even though the status change is pushed in parent, this will make the visual change without doing a reload. 
         if (data!.status == status.USER_NEW)
             data!.status = status.ACTIVE;
-        else if (data!.status == status.USER_RESOLVED)
-            data!.status = status.RESOLVED;
 
         //For de-selecting the listitem when clicked again
-        if (selectedId == data._id)
+        if (selectedId == data.id)
             onClick("");
         else
-            onClick(data._id)
+            onClick(data.id)
     }
     return(
-        <Row className={`m-1 ${data._id == selectedId ? "bg-light" : null}`} onClick={() => handleClick()}>
+        <Row className={`m-1 ${data.id == selectedId ? "bg-light" : null}`} onClick={() => handleClick()}>
             <Col>
-            {data.subject} {data.status == status.USER_NEW || data.status == status.USER_RESOLVED ? <img src={new_message_img} width={10}/> : null}
+            {data.subject} {data.status == status.USER_NEW ? <img src={new_message_img} width={10}/> : null}
             </Col>
             <Col>
                 {new Date(data.date).toDateString()}
             </Col>
             <Col>
-                {new Date(data.last_event).toDateString()}
+                {new Date(data.date).toDateString()}
             </Col>
         </Row>
     )

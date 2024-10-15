@@ -1,43 +1,40 @@
 import { useEffect, useState } from 'react'
 import { Row, Container, Col } from 'react-bootstrap';
+import {io, Socket} from 'socket.io-client';
 import Login from './components/Login'
 import Header from './components/Header';
 import TicketListItem from './components/TicketListItem';
 import TicketBody from './components/TicketBody';
-import { ITicketHeadData } from './typeLib';
+import { ITicketHeadData, IServerToClientEvents, IClientToServerEvents } from './typeLib';
+
+
+
+const socket: Socket<IServerToClientEvents, IClientToServerEvents> = io('http://192.168.0.58:3000', {
+  extraHeaders: {
+      authorization: `bearer ${localStorage.getItem('token')}`
+  }
+});
+
+console.log(new Date().valueOf())
 
 
 export default function App() {
-  const [isLoged, setIsLoged] = useState(false);
+  const [isLoged, setIsLoged] = useState(true);
   const [selectedId, setSelectedId] = useState("");
   const [headerData, setHeaderData] = useState<ITicketHeadData[]>();
 
-  useEffect(() => {
-    if (sessionStorage.getItem("token"))
-      setIsLoged(true);
-  }, [isLoged]);
-
   //Loading headers on socket connect.
   useEffect(() => {
-      if (!isLoged)
-        return;
-
-      fetch(`${import.meta.env.VITE_SERVER}/headers`, {
-      method: 'get',
-      headers: {
-          authorization: `bearer ${sessionStorage.getItem('token')}`
-      },})
-    .then((response) => {
-      if (response.status != 200)
-        setIsLoged(false);
-      return response.json();})
-    .then(data => {setHeaderData(data.data);})
-    
+    socket.on('connect', () => {
+      console.log("connected");
+      setIsLoged(true);
+      socket.emit('headers', (e) => {setHeaderData(e.data); console.log(e.data);})
+    });
   }, [isLoged]);
 
   //Using API to fetch a credential token.
   async function handleLogin(user: string, password: string) {
-    const res = await fetch(`${import.meta.env.VITE_SERVER}/login`, {
+    const res = await fetch('http://localhost:3000/login', {
       method: 'post',
       headers: {
           'content-type': 'application/json'
@@ -46,32 +43,19 @@ export default function App() {
           username: user,
           password: password
       })
-    })
+  })
 
-    //Store token if recieved.      TODO<Should add fail handling>
-    if (res.status === 200) {
+  //Store token if recieved.      TODO<Should add fail handling>
+  if (res.status === 200) {
       const { token } = await res.json();
-      sessionStorage.setItem('token', token);
-      await fetch(`${import.meta.env.VITE_SERVER}/self`, {
-        method: 'get',
-        headers: {
-            authorization: `bearer ${sessionStorage.getItem('token')}`
-        },})
-      .then((response) => {
-        if (response.status != 200)
-          setIsLoged(false);
-          
-        return response.json();})
-        .then((data) => {
-          sessionStorage.setItem('name', data.name)
-          sessionStorage.setItem('id', data.id)
-        })
+      localStorage.setItem('token', token);
       setIsLoged(true);
     }
   }
 
   //Disconnects from socket and clear the credential token.
   function handleLogout() {
+    socket.disconnect();
     sessionStorage.removeItem('token')
     setIsLoged(false);
   };
@@ -92,7 +76,7 @@ export default function App() {
         {!headerData ? null :
         headerData.map((data) => <TicketListItem data={data} selectedId={selectedId} onClick={handleItemClicked} key={data.date}/>)}
       </Container>
-      {selectedId != ""  ? <TicketBody data={headerData!.find((element => element._id == selectedId))} id={selectedId}/> : "naj"}
+      {selectedId != ""  ? <TicketBody socket={socket} data={headerData!.find((element => element.id == selectedId))} id={selectedId}/> : "naj"}
     </>
   )
 }

@@ -37,11 +37,11 @@ export const ticketDetailList = [
   },
 ];
 
-export function pushStatus(data){
-  ticketList.data.find((element) => element.id == data.id).status = data.status;
+export function setReadStatus(data){
+  data.data.map((element) => element.status == 2 ? element.status = 0 : (element.status == 3 ? element.status = 4 : null )).status = data.status;
 }
 
-export function pushMessage(data){
+export function postMessage(data){
   const ticket = ticketDetailList.find((element) => element.id == data.id)
 
   ticket.messages.push({

@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from "react";
+import {Socket} from 'socket.io-client';
 import { Container, Row, Col, Card, Form, Button } from "react-bootstrap";
-import { ITicketDetailData, ITicketHeadData, status  } from "../typeLib";
+import { ITicketDetailData, ITicketHeadData, IServerToClientEvents, IClientToServerEvents, status  } from "../typeLib";
 import TicketMessage from "./TicketMessage";
 
 type TicketBodyProps = {
   id: string;
-  data: ITicketHeadData | undefined;  
+  data: ITicketHeadData | undefined;
+  socket: Socket<IServerToClientEvents, IClientToServerEvents>;
+  
 }
 
 //Render the body where messages are handled.
-  const TicketBody: React.FC<TicketBodyProps> = ({data, id}) => {
-  const [detailedData, setDetailedData] = useState<ITicketDetailData>({_id: "", messages: []});
+const TicketBody: React.FC<TicketBodyProps> = ({data, id, socket}) => {
+  const [detailedData, setDetailedData] = useState<ITicketDetailData>({id: "", messages: []});
   const [lastId, setLastID] = useState<string>("");
   const [formText, setFormText] = useState<string>("");
 
@@ -20,36 +23,23 @@ type TicketBodyProps = {
 
   //Loads ticket details and changes status when unread is view.
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_SERVER}/details/${id}`, {
-      method: 'get',
-      headers: {
-          authorization: `bearer ${sessionStorage.getItem('token')}`
-      },
-
-    })
-    //.then(response => console.log(response))
-    .then(response => response.json())
-    //.then(data => console.log(data))
-    .then(data => setDetailedData(data))
-    
-  }, [lastId, data, id])
+    console.log("test")
+      socket.emit('details', id, (e) => {
+        setDetailedData(e.data);
+        console.log(e.data);
+        
+        //Pushes change to status when unread in viewed.
+        if (data!.status == status.USER_NEW){
+          data!.status = status.ACTIVE;
+          socket.emit('pushStatus', {id: id, status: status.ACTIVE});
+        }}
+      )
+  },[lastId, data, id, socket])
 
 
   //Pushes a new message and gets a reload with updated data.
   async function handleSubmit() {
-    fetch(`${import.meta.env.VITE_SERVER}/details/${id}`, {
-      method: 'post',
-      headers: {
-          authorization: `bearer ${sessionStorage.getItem('token')}`,
-          'content-type': 'application/json'
-      },
-      body: JSON.stringify({
-        id: id,
-        message: formText
-    })
-    })
-    .then(response => response.json())
-    .then(data => setDetailedData(data.data))
+    await socket.emit('pushMessage', {id: id, message: formText}, (e)=>{setDetailedData(e.data)});
     setFormText("");
   }
 
