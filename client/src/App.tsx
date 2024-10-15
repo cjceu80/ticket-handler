@@ -21,7 +21,6 @@ export default function App() {
   useEffect(() => {
       if (!isLoged)
         return;
-
       fetch(`${import.meta.env.VITE_SERVER}/headers`, {
       method: 'get',
       headers: {
@@ -78,7 +77,22 @@ export default function App() {
 
   //Calback from list items onClick events.
   function handleItemClicked(id: string) {
+
       setSelectedId(id)
+  }
+
+  //Do not like this
+  function bodyCallback(){
+    fetch(`${import.meta.env.VITE_SERVER}/headers`, {
+      method: 'get',
+      headers: {
+          authorization: `bearer ${sessionStorage.getItem('token')}`
+      },})
+    .then((response) => {
+      if (response.status != 200)
+        setIsLoged(false);
+      return response.json();})
+    .then(data => {setHeaderData(data.data);})
   }
 
   return (
@@ -92,7 +106,7 @@ export default function App() {
         {!headerData ? null :
         headerData.map((data) => <TicketListItem data={data} selectedId={selectedId} onClick={handleItemClicked} key={data.date}/>)}
       </Container>
-      {selectedId != ""  ? <TicketBody data={headerData!.find((element => element._id == selectedId))} id={selectedId}/> : "naj"}
+      {selectedId != ""  ? <TicketBody callback={bodyCallback} data={headerData!.find((element => element._id == selectedId))} id={selectedId}/> : "naj"}
     </>
   )
 }

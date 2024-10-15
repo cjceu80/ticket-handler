@@ -6,10 +6,11 @@ import TicketMessage from "./TicketMessage";
 type TicketBodyProps = {
   id: string;
   data: ITicketHeadData | undefined;  
+  callback: () => void;
 }
 
 //Render the body where messages are handled.
-  const TicketBody: React.FC<TicketBodyProps> = ({data, id}) => {
+  const TicketBody: React.FC<TicketBodyProps> = ({data, id, callback}) => {
   const [detailedData, setDetailedData] = useState<ITicketDetailData>({_id: "", messages: []});
   const [lastId, setLastID] = useState<string>("");
   const [formText, setFormText] = useState<string>("");
@@ -49,8 +50,10 @@ type TicketBodyProps = {
     })
     })
     .then(response => response.json())
-    .then(data => setDetailedData(data.data))
+    .then(data => setDetailedData(data))
+    .then(() => callback());
     setFormText("");
+    
   }
 
   return(

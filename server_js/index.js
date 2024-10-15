@@ -26,9 +26,8 @@ const users = [];
 tokenApp.use(bodyParser.json());
 tokenApp.use(cors({origin: "*"}));
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
 
-
+//Return user data from database.
 tokenApp.get(
   "/self",
   passport.authenticate("jwt", { session: false }),
@@ -41,6 +40,7 @@ tokenApp.get(
   },
 );
 
+//Returns all ticket heads from database
 tokenApp.get(
   "/headers",
   passport.authenticate("jwt", { session: false }),
@@ -50,7 +50,6 @@ tokenApp.get(
       const database =(await connection).db('ticketdb');
       const heads = await database.collection('ticket_heads').find({"owner": ObjectId.createFromHexString(req.user.id)}).toArray()
       res.send({data: heads});
-      setReadStatus(ticketList);
     }
     catch (err) { console.log(err) };
     } else {
@@ -60,6 +59,24 @@ tokenApp.get(
 );
 
 tokenApp.get(
+  "/header/:id",
+  passport.authenticate("jwt", { session: false }),
+  async (req, res) => {
+    if (req.user) {
+      try{
+      const database =(await connection).db('ticketdb');
+      const heads = await database.collection('ticket_heads').findOne(ObjectId.createFromHexString(req.user.id))
+      res.send({data: heads});
+    }
+    catch (err) { console.log(err) };
+    } else {
+      res.status(401).end();
+    }
+  },
+);
+
+//Return all detailed data from ticket by provided id in the params. 
+tokenApp.get(
   "/details/:id",
   passport.authenticate("jwt", { session: false }),
   async (req, res) => {
@@ -67,10 +84,24 @@ tokenApp.get(
       try{
         const database =(await connection).db('ticketdb');
         const details = await database.collection('ticket_details').findOne(ObjectId.createFromHexString(req.params.id));
-        /*console.log("begin")
-        console.log(details)
-        console.log("end")*/
         res.send(details);
+      }
+      catch (err) { console.log(err) };
+    } else {
+      res.status(401).end();
+    }
+  },
+);
+
+
+tokenApp.post(
+  "/status/:id",
+  passport.authenticate("jwt", { session: false }),
+  async (req, res) => {
+    if (req.user) {
+      try{
+        const database =(await connection).db('ticketdb');
+        database.collection('ticket_heads').updateOne({_id: ObjectId.createFromHexString(req.params.id)}, {$set: {status: req.body.status}});
       }
       catch (err) { console.log(err) };
     } else {
@@ -82,14 +113,19 @@ tokenApp.get(
 tokenApp.post(
   "/details/:id",
   passport.authenticate("jwt", { session: false }),
-  (req, res) => {
+  async (req, res) => {
     if (req.user) {
-      postMessage(req.body);
-      res.send(GetTicketDetails(req.params.id));
+      try{
+        const database =(await connection).db('ticketdb');
+        await database.collection('ticket_details').updateOne(
+          {_id: ObjectId.createFromHexString(req.params.id)},
+          {$push: {messages: {message: req.body.message, sender:req.user.id, date: new Date()}}});
+        database.collection('ticket_heads').updateOne({_id: ObjectId.createFromHexString(req.params.id)}, {$set: {last_event: new Date()}});
+        res.send(await database.collection('ticket_details').findOne(ObjectId.createFromHexString(req.params.id)));
+      } catch (err) { console.log(err) };
     } else {
       res.status(401).end();
     }
-    sendtest();
   }
 );
 
@@ -104,8 +140,6 @@ tokenApp.post("/login", async (req, res) => {
       username: userCred.last_name,
       name: `${userCred.first_name} ${userCred.last_name}`
     };
-
-
 
     const token = jwt.sign(
       {

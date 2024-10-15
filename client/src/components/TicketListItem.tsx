@@ -12,14 +12,30 @@ type ListItemProps = {
 
 //Component rendering a single list item in the ticketlist
 const TicketListItem: React.FC<ListItemProps> = ({data, selectedId, onClick}) => {
+    async function sendStatus(newStatus: status) {
+        data!.status = newStatus;
+        console.log("Sending post status with id:")
+        console.log(data!._id);
+        await fetch(`${import.meta.env.VITE_SERVER}/status/${data!._id}`, {
+            method: 'post',
+            headers: {
+                authorization: `bearer ${sessionStorage.getItem('token')}`,
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify({
+              status: newStatus,
+          })
+          });
+        console.log("sent post status")
+    }
     
     //Handles the onClick on the tickets list entry
     function handleClick() {
         //Even though the status change is pushed in parent, this will make the visual change without doing a reload. 
         if (data!.status == status.USER_NEW)
-            data!.status = status.ACTIVE;
+            sendStatus(status.ACTIVE);
         else if (data!.status == status.USER_RESOLVED)
-            data!.status = status.RESOLVED;
+            sendStatus(status.RESOLVED);
 
         //For de-selecting the listitem when clicked again
         if (selectedId == data._id)
