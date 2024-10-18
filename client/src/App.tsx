@@ -12,21 +12,26 @@ export default function App() {
   const [selectedId, setSelectedId] = useState("");
   const [headerData, setHeaderData] = useState<ITicketHeadData[]>();
 
+  //Enable client to continue to be loged in when refreshed
   useEffect(() => {
     if (sessionStorage.getItem("token"))
       setIsLoged(true);
   }, [isLoged]);
 
-  //Loading headers on socket connect.
+  //Loading headers when loged in.
   useEffect(() => {
+      //Check if loged in, if not it returns
       if (!isLoged)
         return;
+
+      //Try to get headers data
       fetch(`${import.meta.env.VITE_SERVER}/headers`, {
       method: 'get',
       headers: {
           authorization: `bearer ${sessionStorage.getItem('token')}`
       },})
     .then((response) => {
+      //if responce isn't successfull token is removed and client set to loged out
       if (response.status != 200){
         sessionStorage.removeItem('token');
         setIsLoged(false);
@@ -38,6 +43,8 @@ export default function App() {
 
   //Using API to fetch a credential token.
   async function handleLogin(user: string, password: string) {
+
+    //Try to get token from server
     const res = await fetch(`${import.meta.env.VITE_SERVER}/login`, {
       method: 'post',
       headers: {
@@ -49,7 +56,7 @@ export default function App() {
       })
     })
 
-    //Store token if recieved.      TODO<Should add fail handling>
+    //Store token if recieved.
     if (res.status === 200) {
       const { token } = await res.json();
       sessionStorage.setItem('token', token);
@@ -59,10 +66,10 @@ export default function App() {
             authorization: `bearer ${sessionStorage.getItem('token')}`
         },})
       .then((response) => {
+        //If unsuccessfull loged in is set to false
         if (response.status != 200)
           setIsLoged(false);
-          
-        return response.json();})
+          return response.json();})
         .then((data) => {
           sessionStorage.setItem('name', data.name)
           sessionStorage.setItem('id', data.id)
@@ -79,7 +86,6 @@ export default function App() {
 
   //Calback from list items onClick events.
   function handleItemClicked(id: string) {
-
       setSelectedId(id)
   }
 

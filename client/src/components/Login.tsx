@@ -5,29 +5,37 @@ type TLoginProps = {
     onClick: (username: string, password: string) => void;
 }
 
-
 const Login: React.FC<TLoginProps> = ({onClick}) => {
+    //States for new account creation functionality
     const [doesExistError, setExistError] = useState(false);
     const [isPasswordError, setIsPasswordError] = useState(false);
     const [isFilledError, setIsFilledError] = useState(false);
+    const [newAccount, setNewAccount] = useState(false);
+
+    //States for text fields
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
     const [user, setUser] = useState("");
-    const [newAccount, setNewAccount] = useState(false);
     const [password, setPassword] = useState("");
     const [password2, setPassword2] = useState("");
 
+    //OnClick event for the button to submit new account information
     async function handleCreateNewClick() {
+
+        //Check for password match
         if (password != password2){
             setIsPasswordError(true);
         } else setIsPasswordError(false);
+        //Check for ev empty fields
         if (firstName == "" || lastName == "" || user == "" || password == ""){
             setIsFilledError(true);
         } else setIsFilledError(false);
 
+        //Return if errors was triggered
         if (isFilledError || isFilledError)
             return;
 
+        //Attempt to create a new account
         const response = await fetch(`${import.meta.env.VITE_SERVER}/createlogin`, {
             method: 'post',
             headers: {
@@ -40,10 +48,12 @@ const Login: React.FC<TLoginProps> = ({onClick}) => {
                 id2: password
             })
         })
+
+        //If email already was registered a 409 will be recieved, else the details will be sent as a login callback.
         if (response.status == 409)
             setExistError(true);
         else 
-        onClick(user, password);
+            onClick(user, password);
     }
 
     return (

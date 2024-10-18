@@ -8,7 +8,7 @@ import bodyParser from "body-parser";
 import cors from 'cors';
 import { MongoClient, ObjectId } from "mongodb";
 
-import {GetTicketDetails, postMessage, setReadStatus, ticketList} from './debugData.js';
+import {GetTicketDetails, postMessage, ticketList} from './debugData.js';
 
 const port = process.env.PORT || 3000;
 const jwtSecret = "Mys3cr3t";
@@ -40,33 +40,49 @@ tokenApp.get(
 //Returns all ticket heads from database
 tokenApp.get(
   "/headers",
-  passport.authenticate("jwt", { session: false }),
+  passport.authenticate("jwt", { session: false }),    
   async (req, res) => {
+
+    //Check for autherized user
     if (req.user) {
       try{
-      const database =(await connection).db('ticketdb');
-      const heads = await database.collection('ticket_heads').find({"owner": ObjectId.createFromHexString(req.user.id)}).toArray()
-      res.send({data: heads});
-    }
+        //Initialize database
+        const database =(await connection).db('ticketdb');
+
+        //Gets all ticket heads user owns
+        const heads = await database.collection('ticket_heads').find({"owner": ObjectId.createFromHexString(req.user.id)}).toArray()
+
+        //Update the users last activity
+        database.collection('client_users').updateOne({_id: ObjectId.createFromHexString(req.user.id)}, {$set: {last_active: new Date()}});
+
+        //Return the result to the user client
+        res.send({data: heads});
+      }
     catch (err) { console.log(err) };
     } else {
+      //Return unautherized
       res.status(401).end();
     }
   },
 );
 
+//Return a header for given ticket id
 tokenApp.get(
   "/header/:id",
   passport.authenticate("jwt", { session: false }),
   async (req, res) => {
+    
+    //Check for autherized user
     if (req.user) {
       try{
-      const database =(await connection).db('ticketdb');
-      const heads = await database.collection('ticket_heads').findOne(ObjectId.createFromHexString(req.user.id))
-      res.send({data: heads});
-    }
-    catch (err) { console.log(err) };
+        //Initialize database 
+        const database =(await connection).db('ticketdb');
+        const heads = await database.collection('ticket_heads').findOne(ObjectId.createFromHexString(req.user.id))
+        res.send({data: heads});
+      }
+      catch (err) { console.log(err) };
     } else {
+      //Return unautherized
       res.status(401).end();
     }
   },
@@ -77,31 +93,41 @@ tokenApp.get(
   "/details/:id",
   passport.authenticate("jwt", { session: false }),
   async (req, res) => {
+    
+    //Check for autherized user
     if (req.user) {
       try{
+        //Initialize database
         const database =(await connection).db('ticketdb');
         const details = await database.collection('ticket_details').findOne(ObjectId.createFromHexString(req.params.id));
         res.send(details);
       }
       catch (err) { console.log(err) };
     } else {
+      //Return unautherized
       res.status(401).end();
     }
   },
 );
 
-
+//Updates the status on a ticket head. Used for when a user open an un-opened message
 tokenApp.post(
   "/status/:id",
   passport.authenticate("jwt", { session: false }),
   async (req, res) => {
+
+    //Check for autherized user
     if (req.user) {
       try{
+        //Initialize database
         const database =(await connection).db('ticketdb');
+
+        //Updates the ticket head status
         database.collection('ticket_heads').updateOne({_id: ObjectId.createFromHexString(req.params.id)}, {$set: {status: req.body.status}});
       }
       catch (err) { console.log(err) };
     } else {
+      //Return unautherized
       res.status(401).end();
     }
   },
@@ -111,24 +137,43 @@ tokenApp.post(
   "/details/:id",
   passport.authenticate("jwt", { session: false }),
   async (req, res) => {
+
+    //Check for autherized user
     if (req.user) {
       try{
+        //Initialize database
         const database =(await connection).db('ticketdb');
+
+        //Adds the message to the ticket details
         await database.collection('ticket_details').updateOne(
           {_id: ObjectId.createFromHexString(req.params.id)},
           {$push: {messages: {message: req.body.message, sender:req.user.id, date: new Date()}}});
+
+        //Update last activity on ticket head
         database.collection('ticket_heads').updateOne({_id: ObjectId.createFromHexString(req.params.id)}, {$set: {last_event: new Date()}});
+
+        //Update last activity on user
+        database.collection('client_users').updateOne({_id: ObjectId.createFromHexString(req.user.id)}, {$set: {last_active: new Date()}});
+
+        //Return the new updated ticket details
         res.send(await database.collection('ticket_details').findOne(ObjectId.createFromHexString(req.params.id)));
       } catch (err) { console.log(err) };
     } else {
+      //Return unautherized
       res.status(401).end();
     }
   }
 );
 
+//Creates a new account and send 200 if successfull and 409 if user email already exist in database
 tokenApp.post("/createlogin", async (req, res) => {
+  //Initialize database
   const database = (await connection).db('ticketdb');
+
+  //Search in database for email
   const userTest = await database.collection('client_users').findOne({'email': req.body.email});
+
+  //If email is new create the account
   if (!userTest)
   {
     console.log("Email not found, ok creating new")
@@ -138,24 +183,33 @@ tokenApp.post("/createlogin", async (req, res) => {
     res.status(200);
     res.send();
 
-  } else {
+  } else {  //When email exist
     console.log("Email exist, sending error");
+    //Return conflict
     res.status(409).end();
   }
 });
 
+//Login wirh user credentials that return a token to the client
 tokenApp.post("/login", async (req, res) => {
+  //Initialize database
   const database =(await connection).db('ticketdb');
+
+  //Gets the users information
   const userCred = await database.collection('client_users').findOne({email: req.body.username})
+
+  //Handle a password match
   if (userCred && userCred.id2 === req.body.password) {
     console.log("authentication OK");
 
+    //User object to sign
     const user = {
       id: userCred._id.toString(),
       username: userCred.email,
       name: `${userCred.first_name} ${userCred.last_name}`
     };
 
+    //Creating a signed token
     const token = jwt.sign(
       {
         data: user,
@@ -167,10 +221,13 @@ tokenApp.post("/login", async (req, res) => {
         expiresIn: "1h",
       },
     );
+
+    //Return signed token
     res.json({ token });
 
   } else {
     console.log("wrong credentials");
+    //Return unautherized
     res.status(401).end();
   }
 });

@@ -24,6 +24,7 @@ type TTicketBodyProps = {
     if (!sessionStorage.getItem('token')){
       return;}
 
+    //Attempt to fetch details
     fetch(`${import.meta.env.VITE_SERVER}/details/${id}`, {
       method: 'get',
       headers: {
@@ -31,12 +32,11 @@ type TTicketBodyProps = {
       },
 
     })
-    //.then(response => console.log(response))
     .then(response => { 
+      //If responce isn't a success the client is most likely timed out and will hence remove the token to trigger the login modal
       if (response.status != 200)
         sessionStorage.removeItem('token');
       return response.json()})
-    //.then(data => console.log(data))
     .then(data => setDetailedData(data))
     
   }, [lastId, data, id])
@@ -44,6 +44,7 @@ type TTicketBodyProps = {
 
   //Pushes a new message and gets a reload with updated data.
   async function handleSubmit() {
+
     fetch(`${import.meta.env.VITE_SERVER}/details/${id}`, {
       method: 'post',
       headers: {

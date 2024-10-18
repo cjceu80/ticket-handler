@@ -12,10 +12,10 @@ type TListItemProps = {
 
 //Component rendering a single list item in the ticketlist
 const TicketListItem: React.FC<TListItemProps> = ({data, selectedId, onClick}) => {
+
+    //When clicked an unread message, this post the change of status
     async function sendStatus(newStatus: status) {
         data!.status = newStatus;
-        console.log("Sending post status with id:")
-        console.log(data!._id);
         await fetch(`${import.meta.env.VITE_SERVER}/status/${data!._id}`, {
             method: 'post',
             headers: {
@@ -26,7 +26,6 @@ const TicketListItem: React.FC<TListItemProps> = ({data, selectedId, onClick}) =
               status: newStatus,
           })
           });
-        console.log("sent post status")
     }
     
     //Handles the onClick on the tickets list entry
