@@ -2,12 +2,12 @@ import React from "react";
 import { Card, CardBody, Col, Row } from "react-bootstrap";
 import { IMessage } from "../typeLib";
 
-type TicketMessageProps = {
+type TTicketMessageProps = {
     message: IMessage;
 }
 
 //Component rendering a single message
-const TicketMessage: React.FC<TicketMessageProps> = ({message}) => {
+const TicketMessage: React.FC<TTicketMessageProps> = ({message}) => {
 
     return(
       <Row>

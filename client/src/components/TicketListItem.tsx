@@ -4,14 +4,14 @@ import { Col, Row } from "react-bootstrap";
 import { status, ITicketHeadData} from "../typeLib";
 import new_message_img from "../assets/new_message.svg"
 
-type ListItemProps = {
+type TListItemProps = {
     data: ITicketHeadData;
     selectedId: string;
     onClick: (id: string) => void;
 }
 
 //Component rendering a single list item in the ticketlist
-const TicketListItem: React.FC<ListItemProps> = ({data, selectedId, onClick}) => {
+const TicketListItem: React.FC<TListItemProps> = ({data, selectedId, onClick}) => {
     async function sendStatus(newStatus: status) {
         data!.status = newStatus;
         console.log("Sending post status with id:")

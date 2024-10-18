@@ -1,7 +1,5 @@
 import express from "express";
 import { createServer } from "node:http";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
 import { Server } from "socket.io";
 import passport from "passport";
 import { Strategy as JwtStrategy, ExtractJwt } from "passport-jwt";
@@ -15,13 +13,12 @@ import {GetTicketDetails, postMessage, setReadStatus, ticketList} from './debugD
 const port = process.env.PORT || 3000;
 const jwtSecret = "Mys3cr3t";
 
-//-------------------------
-//--------API server-------
-//-------------------------
+//---------------------------------------------------------------------------
+//---------------------------------API server--------------------------------
+//---------------------------------------------------------------------------
 
 const tokenApp = express();
 const httpServer = createServer(tokenApp);
-const users = [];
 
 tokenApp.use(bodyParser.json());
 tokenApp.use(cors({origin: "*"}));
@@ -129,15 +126,33 @@ tokenApp.post(
   }
 );
 
+tokenApp.post("/createlogin", async (req, res) => {
+  const database = (await connection).db('ticketdb');
+  const userTest = await database.collection('client_users').findOne({'email': req.body.email});
+  if (!userTest)
+  {
+    console.log("Email not found, ok creating new")
+    req.body.last_active = new Date();
+    await (await database.collection('client_users').insertOne(req.body)).insertedId.toString();
+
+    res.status(200);
+    res.send();
+
+  } else {
+    console.log("Email exist, sending error");
+    res.status(409).end();
+  }
+});
+
 tokenApp.post("/login", async (req, res) => {
   const database =(await connection).db('ticketdb');
-  const userCred = await database.collection('client_users').findOne({"last_name": 'Mupp'})
+  const userCred = await database.collection('client_users').findOne({email: req.body.username})
   if (userCred && userCred.id2 === req.body.password) {
     console.log("authentication OK");
 
     const user = {
       id: userCred._id.toString(),
-      username: userCred.last_name,
+      username: userCred.email,
       name: `${userCred.first_name} ${userCred.last_name}`
     };
 
@@ -160,9 +175,9 @@ tokenApp.post("/login", async (req, res) => {
   }
 });
 
-//-------------------------
-//----------Token----------
-//-------------------------
+//---------------------------------------------------------------------------
+//-----------------------------------Token-----------------------------------
+//---------------------------------------------------------------------------
 
 const jwtDecodeOptions = {
   jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -177,9 +192,9 @@ passport.use(
   }),
 );
 
-//-------------------------
-//--------Websocket--------
-//-------------------------
+//---------------------------------------------------------------------------
+//---------------------------------Websocket---------------------------------
+//---------------------------------------------------------------------------
 
 const io = new Server(httpServer, {
   cors: {
@@ -222,9 +237,9 @@ httpServer.listen(port, () => {
   console.log(`application is running at: http://localhost:${port}`);
 });
 
-//-------------------------
-//--------Database---------
-//-------------------------
+//---------------------------------------------------------------------------
+//---------------------------------Database----------------------------------
+//---------------------------------------------------------------------------
 
 
 // use when starting application locally
@@ -233,20 +248,9 @@ const mongoUrlLocal = "mongodb://admin:password@localhost:27017";
 // use when starting application as docker container
 const mongoUrlDocker = "mongodb://admin:password@mongodb";
 
-const databaseName = "ticketdb";
-
 const mongoClient = new MongoClient(mongoUrlLocal);
 
 const connection = mongoClient.connect();
 
-async function sendtest() {
-  try{
-    const database =(await connection).db('ticketdb');
-    const result = await database.collection('ticket_heads').insertMany([{name: 'mupp'}])
-      console.log(result.insertedIds['0']);
-    return result;
-  }
-  catch (err) { console.log(err) };
-}
 
 //const dbconnection = mongoConnect();

@@ -27,8 +27,10 @@ export default function App() {
           authorization: `bearer ${sessionStorage.getItem('token')}`
       },})
     .then((response) => {
-      if (response.status != 200)
+      if (response.status != 200){
+        sessionStorage.removeItem('token');
         setIsLoged(false);
+      }
       return response.json();})
     .then(data => {setHeaderData(data.data);})
     
@@ -81,7 +83,7 @@ export default function App() {
       setSelectedId(id)
   }
 
-  //Do not like this
+  //Do not like this, reloads the date to update the last event date in the list
   function bodyCallback(){
     fetch(`${import.meta.env.VITE_SERVER}/headers`, {
       method: 'get',

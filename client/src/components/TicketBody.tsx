@@ -3,14 +3,14 @@ import { Container, Row, Col, Card, Form, Button } from "react-bootstrap";
 import { ITicketDetailData, ITicketHeadData, status  } from "../typeLib";
 import TicketMessage from "./TicketMessage";
 
-type TicketBodyProps = {
+type TTicketBodyProps = {
   id: string;
   data: ITicketHeadData | undefined;  
   callback: () => void;
 }
 
 //Render the body where messages are handled.
-  const TicketBody: React.FC<TicketBodyProps> = ({data, id, callback}) => {
+  const TicketBody: React.FC<TTicketBodyProps> = ({data, id, callback}) => {
   const [detailedData, setDetailedData] = useState<ITicketDetailData>({_id: "", messages: []});
   const [lastId, setLastID] = useState<string>("");
   const [formText, setFormText] = useState<string>("");
@@ -21,6 +21,9 @@ type TicketBodyProps = {
 
   //Loads ticket details and changes status when unread is view.
   useEffect(() => {
+    if (!sessionStorage.getItem('token')){
+      return;}
+
     fetch(`${import.meta.env.VITE_SERVER}/details/${id}`, {
       method: 'get',
       headers: {
@@ -29,7 +32,10 @@ type TicketBodyProps = {
 
     })
     //.then(response => console.log(response))
-    .then(response => response.json())
+    .then(response => { 
+      if (response.status != 200)
+        sessionStorage.removeItem('token');
+      return response.json()})
     //.then(data => console.log(data))
     .then(data => setDetailedData(data))
     

@@ -1,11 +1,11 @@
 import React from "react";
 import { Navbar, Button, Container } from "react-bootstrap";
 
-type ClickCallback = {
+type THeaderProps = {
     onClick: () => void;
 }
 
-const Header: React.FC<ClickCallback> = ( {onClick}) => {
+const Header: React.FC<THeaderProps> = ( {onClick}) => {
 
     return(
         <Navbar className="bg-body-secondary">
