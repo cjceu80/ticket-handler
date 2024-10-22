@@ -50,11 +50,12 @@ tokenApp.get(
         const database =(await connection).db('ticketdb');
 
         //Gets all ticket heads user owns
-        const heads = await database.collection('ticket_heads').find({"owner": ObjectId.createFromHexString(req.user.id)}).toArray()
+        const heads = await database.collection('ticket_heads').find({"owner": req.user.id}).toArray();
 
         //Update the users last activity
         database.collection('client_users').updateOne({_id: ObjectId.createFromHexString(req.user.id)}, {$set: {last_active: new Date()}});
-
+        console.log(req.user.id)
+        console.log(heads)
         //Return the result to the user client
         res.send({data: heads});
       }
@@ -165,6 +166,48 @@ tokenApp.post(
   }
 );
 
+tokenApp.post(
+  "/message",
+  passport.authenticate("jwt", { session: false }),
+  async (req, res) => {
+
+    //Check for autherized user
+    if (req.user) {
+      try{
+        //Initialize database
+        const database =(await connection).db('ticketdb');
+        const newDate = new Date()
+        const head = {
+          status: 1,
+          date: newDate,
+          last_event: newDate,
+          owner: req.user.id,
+          admin: "",
+          subject: req.body.subject,
+        }
+        const newId = await (await database.collection('ticket_heads').insertOne(head)).insertedId.toString();
+
+        const details = {
+          _id: ObjectId.createFromHexString(newId),
+          messages:[{
+            date: newDate,
+            message: req.body.message,
+            sender: req.user.id,
+          }]
+        }
+
+        await (await database.collection('ticket_details').insertOne(details)).insertedId.toString();
+
+        res.send({data: newId});
+
+      } catch (err) { console.log(err) };
+    } else {
+      //Return unautherized
+      res.status(401).end();
+    }
+  }
+);
+
 //Creates a new account and send 200 if successfull and 409 if user email already exist in database
 tokenApp.post("/createlogin", async (req, res) => {
   //Initialize database
@@ -178,7 +221,7 @@ tokenApp.post("/createlogin", async (req, res) => {
   {
     console.log("Email not found, ok creating new")
     req.body.last_active = new Date();
-    await (await database.collection('client_users').insertOne(req.body)).insertedId.toString();
+    await (await database.collection('client_users').insertOne(req.body))//.insertedId.toString();
 
     res.status(200);
     res.send();

@@ -5,6 +5,7 @@ import Header from './components/Header';
 import TicketListItem from './components/TicketListItem';
 import TicketBody from './components/TicketBody';
 import { ITicketHeadData } from './typeLib';
+import NewTicket from './components/NewTicket';
 
 
 export default function App() {
@@ -103,6 +104,20 @@ export default function App() {
     .then(data => {setHeaderData(data.data);})
   }
 
+  async function newMessageCallback(id: string) {
+    await fetch(`${import.meta.env.VITE_SERVER}/headers`, {
+      method: 'get',
+      headers: {
+          authorization: `bearer ${sessionStorage.getItem('token')}`
+      },})
+    .then((response) => {
+      if (response.status != 200)
+        setIsLoged(false);
+      return response.json();})
+    .then(data => {setHeaderData(data.data);})
+    setSelectedId(id);
+  }
+
   return (
     <>
       {!isLoged ? <Login onClick={handleLogin}/> : null}
@@ -114,7 +129,10 @@ export default function App() {
         {!headerData ? null :
         headerData.map((data) => <TicketListItem data={data} selectedId={selectedId} onClick={handleItemClicked} key={data.date}/>)}
       </Container>
-      {selectedId != ""  ? <TicketBody callback={bodyCallback} data={headerData!.find((element => element._id == selectedId))} id={selectedId}/> : "naj"}
+      {selectedId != ""  ?
+        <TicketBody callback={bodyCallback} data={headerData!.find((element => element._id == selectedId))} id={selectedId}/>
+        :
+        <NewTicket callback={newMessageCallback} />}
     </>
   )
 }
