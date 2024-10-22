@@ -15,18 +15,18 @@ const jwtSecret = "Mys3cr3t";
 
 
 //---------------------------------------------------------------------------
-//---------------------------------API server--------------------------------
+//-----------------------------CLient API server-----------------------------
 //---------------------------------------------------------------------------
 
-const tokenApp = express();
-const httpServer = createServer(tokenApp);
+const clientApp = express();
+const httpServer = createServer(clientApp);
 
-tokenApp.use(bodyParser.json());
-tokenApp.use(cors({origin: "*"}));
+clientApp.use(bodyParser.json());
+clientApp.use(cors({origin: "*"}));
 
 
 //Return user data from database.
-tokenApp.get(
+clientApp.get(
   "/self",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
@@ -39,7 +39,7 @@ tokenApp.get(
 );
 
 //Returns all ticket heads from database
-tokenApp.get(
+clientApp.get(
   "/headers",
   passport.authenticate("jwt", { session: false }),    
   async (req, res) => {
@@ -67,7 +67,7 @@ tokenApp.get(
 );
 
 //Return a header for given ticket id
-tokenApp.get(
+clientApp.get(
   "/header/:id",
   passport.authenticate("jwt", { session: false }),
   async (req, res) => {
@@ -89,7 +89,7 @@ tokenApp.get(
 );
 
 //Return all detailed data from ticket by provided id in the params. 
-tokenApp.get(
+clientApp.get(
   "/details/:id",
   passport.authenticate("jwt", { session: false }),
   async (req, res) => {
@@ -111,7 +111,7 @@ tokenApp.get(
 );
 
 //Updates the status on a ticket head. Used for when a user open an un-opened message
-tokenApp.post(
+clientApp.post(
   "/status/:id",
   passport.authenticate("jwt", { session: false }),
   async (req, res) => {
@@ -133,7 +133,7 @@ tokenApp.post(
   },
 );
 
-tokenApp.post(
+clientApp.post(
   "/details/:id",
   passport.authenticate("jwt", { session: false }),
   async (req, res) => {
@@ -165,7 +165,7 @@ tokenApp.post(
   }
 );
 
-tokenApp.post(
+clientApp.post(
   "/message",
   passport.authenticate("jwt", { session: false }),
   async (req, res) => {
@@ -208,7 +208,7 @@ tokenApp.post(
 );
 
 //Creates a new account and send 200 if successfull and 409 if user email already exist in database
-tokenApp.post("/createlogin", async (req, res) => {
+clientApp.post("/createlogin", async (req, res) => {
   //Initialize database
   const database = (await connection).db('ticketdb');
 
@@ -233,7 +233,7 @@ tokenApp.post("/createlogin", async (req, res) => {
 });
 
 //Login wirh user credentials that return a token to the client
-tokenApp.post("/login", async (req, res) => {
+clientApp.post("/login", async (req, res) => {
   //Initialize database
   const database =(await connection).db('ticketdb');
 
@@ -292,8 +292,75 @@ passport.use(
 );
 
 //---------------------------------------------------------------------------
-//---------------------------------Websocket---------------------------------
+//--------------------------Websocket Admin Server---------------------------
 //---------------------------------------------------------------------------
+
+//Creates a new account and send 200 if successfull and 409 if user email already exist in database
+clientApp.post("/createadmin", async (req, res) => {
+  //Initialize database
+  const database = (await connection).db('ticketdb');
+
+  //Search in database for email
+  const userTest = await database.collection('admin_users').findOne({'email': req.body.email});
+
+  //If email is new create the account
+  if (!userTest)
+  {
+    console.log("Email not found, ok creating new")
+    req.body.last_active = new Date();
+    await (await database.collection('admin_users').insertOne(req.body));
+
+    res.status(200);
+    res.send();
+
+  } else {  //When email exist
+    console.log("Email exist, sending error");
+    //Return conflict
+    res.status(409).end();
+  }
+});
+
+//Login wirh user credentials that return a token to the client
+clientApp.post("/adminlogin", async (req, res) => {
+  //Initialize database
+  const database =(await connection).db('ticketdb');
+
+  //Gets the users information
+  const userCred = await database.collection('admin_users').findOne({email: req.body.username})
+
+  //Handle a password match
+  if (userCred && userCred.id2 === req.body.password) {
+    console.log("authentication OK");
+
+    //User object to sign
+    const user = {
+      id: userCred._id.toString(),
+      username: userCred.email,
+      name: `${userCred.first_name} ${userCred.last_name}`
+    };
+
+    //Creating a signed token
+    const token = jwt.sign(
+      {
+        data: user,
+      },
+      jwtSecret,
+      {
+        issuer: "accounts.notarealplace.com",
+        audience: "mysite.net",
+        expiresIn: "1h",
+      },
+    );
+
+    //Return signed token
+    res.json({ token });
+
+  } else {
+    console.log("wrong credentials");
+    //Return unautherized
+    res.status(401).end();
+  }
+});
 
 const io = new Server(httpServer, {
   cors: {
@@ -310,6 +377,7 @@ const io = new Server(httpServer, {
   });
   
   io.on("connection", (socket) => {
+    console.log("Attempted connect")
     const req = socket.request;
   
     socket.join(`user:${req.user.id}`);

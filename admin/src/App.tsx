@@ -12,11 +12,9 @@ import { ITicketHeadData, IServerToClientEvents, IClientToServerEvents } from '.
 const socket: Socket<IServerToClientEvents, IClientToServerEvents> = io('http://192.168.0.58:3000', {
   extraHeaders: {
       authorization: `bearer ${localStorage.getItem('token')}`
-  }
+  },
+  reconnectionAttempts: 1
 });
-
-console.log(new Date().valueOf())
-
 
 export default function App() {
   const [isLoged, setIsLoged] = useState(true);
@@ -34,7 +32,7 @@ export default function App() {
 
   //Using API to fetch a credential token.
   async function handleLogin(user: string, password: string) {
-    const res = await fetch('http://localhost:3000/login', {
+    const res = await fetch('http://localhost:3000/adminlogin', {
       method: 'post',
       headers: {
           'content-type': 'application/json'
@@ -43,13 +41,15 @@ export default function App() {
           username: user,
           password: password
       })
-  })
+    })
 
-  //Store token if recieved.      TODO<Should add fail handling>
-  if (res.status === 200) {
+    //Store token if recieved.      TODO<Should add fail handling>
+    if (res.status === 200) {
       const { token } = await res.json();
       localStorage.setItem('token', token);
       setIsLoged(true);
+      if (!socket.connected)
+        socket.connect();
     }
   }
 

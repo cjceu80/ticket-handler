@@ -2,7 +2,7 @@ import React from "react";
 import { Navbar, Button, Container } from "react-bootstrap";
 
 type THeaderProps = {
-    user?: string;
+    user: string | null;
     onClick: () => void;
 }
 
