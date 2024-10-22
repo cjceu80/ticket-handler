@@ -13,6 +13,7 @@ import {GetTicketDetails, postMessage, ticketList} from './debugData.js';
 const port = process.env.PORT || 3000;
 const jwtSecret = "Mys3cr3t";
 
+
 //---------------------------------------------------------------------------
 //---------------------------------API server--------------------------------
 //---------------------------------------------------------------------------
@@ -42,7 +43,6 @@ tokenApp.get(
   "/headers",
   passport.authenticate("jwt", { session: false }),    
   async (req, res) => {
-
     //Check for autherized user
     if (req.user) {
       try{
@@ -53,9 +53,8 @@ tokenApp.get(
         const heads = await database.collection('ticket_heads').find({"owner": req.user.id}).toArray();
 
         //Update the users last activity
-        database.collection('client_users').updateOne({_id: ObjectId.createFromHexString(req.user.id)}, {$set: {last_active: new Date()}});
-        console.log(req.user.id)
-        console.log(heads)
+        database.collection('client_users').updateOne({_id: ObjectId.createFromHexString(req.user.id)}, {$set: {last_active: new Date}});
+
         //Return the result to the user client
         res.send({data: heads});
       }
@@ -176,7 +175,7 @@ tokenApp.post(
       try{
         //Initialize database
         const database =(await connection).db('ticketdb');
-        const newDate = new Date()
+        const newDate = new Date();
         const head = {
           status: 1,
           date: newDate,
@@ -221,7 +220,7 @@ tokenApp.post("/createlogin", async (req, res) => {
   {
     console.log("Email not found, ok creating new")
     req.body.last_active = new Date();
-    await (await database.collection('client_users').insertOne(req.body))//.insertedId.toString();
+    await (await database.collection('client_users').insertOne(req.body));
 
     res.status(200);
     res.send();

@@ -14,7 +14,14 @@ const TicketMessage: React.FC<TTicketMessageProps> = ({message}) => {
         {message.sender == sessionStorage.getItem('id') ? <Col xs={2}></Col> : null}
         <Col sx={10}>
           <Card>
-            <Card.Header className="d-flex justify-content-between"><small>{sessionStorage.getItem('id') == message.sender ? sessionStorage.getItem('name') : message.sender}</small><small>{new Date(message.date).toUTCString()}</small></Card.Header>
+            <Card.Header className="d-flex justify-content-between">
+              <small>
+                {sessionStorage.getItem('id') == message.sender ? sessionStorage.getItem('name') : message.sender}
+              </small>
+              <small>
+                {new Date(message.date).toLocaleString('en', {timeZone: import.meta.env.VITE_TZ})}
+              </small>
+            </Card.Header>
             <CardBody>{message.message}</CardBody>
           </Card>
         </Col>

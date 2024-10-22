@@ -48,10 +48,10 @@ const TicketListItem: React.FC<TListItemProps> = ({data, selectedId, onClick}) =
             {data.subject} {data.status == status.USER_NEW || data.status == status.USER_RESOLVED ? <img src={new_message_img} width={10}/> : null}
             </Col>
             <Col>
-                {new Date(data.date).toDateString()}
+                {new Date(data.date).toLocaleDateString('en', import.meta.env.VITE_TZ)}
             </Col>
             <Col>
-                {new Date(data.last_event).toDateString()}
+                {new Date(data.last_event).toLocaleDateString('en', import.meta.env.VITE_TZ)}
             </Col>
         </Row>
     )

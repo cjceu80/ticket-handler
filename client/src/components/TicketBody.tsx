@@ -70,7 +70,7 @@ type TTicketBodyProps = {
           <h3>{data!.subject != undefined ? data!.subject : "No subject submitted."}</h3>
         </Col>
       </Row>
-      {detailedData.messages.map((element, index) => <TicketMessage key={new Date(element.date).toISOString()+index} message={element}/>)}
+      {detailedData.messages.map((element, index) => <TicketMessage key={new Date(element.date).toLocaleString('en', {timeZone: import.meta.env.VITE_TZ})+index} message={element}/>)}
       <Row>
         <Col xs={2}></Col>
         <Col sx={10}>

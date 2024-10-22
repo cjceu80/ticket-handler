@@ -121,7 +121,7 @@ export default function App() {
   return (
     <>
       {!isLoged ? <Login onClick={handleLogin}/> : null}
-      <Header onClick={handleLogout}/>
+      <Header user={sessionStorage.getItem('name')} onClick={handleLogout}/>
       <Container className='p-1 bg-body'>
         <Row className='m-1 border-bottom'>
           <Col>Subject</Col><Col>Created</Col><Col>Last</Col>
