@@ -20,21 +20,22 @@ const TicketListItem: React.FC<ListItemProps> = ({data, selectedId, onClick}) =>
             data!.status = status.ACTIVE;
 
         //For de-selecting the listitem when clicked again
-        if (selectedId == data.id)
+        if (selectedId == data._id)
             onClick("");
         else
-            onClick(data.id)
+            onClick(data._id)
     }
+
     return(
-        <Row className={`m-1 ${data.id == selectedId ? "bg-light" : null}`} onClick={() => handleClick()}>
-            <Col>
+        <Row className={`m-1 ${data._id == selectedId ? "bg-light" : null}`} onClick={() => handleClick()}>
+            <Col xs={6}>
             {data.subject} {data.status == status.USER_NEW ? <img src={new_message_img} width={10}/> : null}
             </Col>
-            <Col>
-                {new Date(data.date).toDateString()}
+            <Col xs={3}>
+                {new Date(data.date).toLocaleDateString()}
             </Col>
-            <Col>
-                {new Date(data.date).toDateString()}
+            <Col xs={3}>
+                {new Date(data.date).toLocaleDateString()}
             </Col>
         </Row>
     )

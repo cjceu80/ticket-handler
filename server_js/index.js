@@ -10,20 +10,43 @@ import { MongoClient, ObjectId } from "mongodb";
 
 import {GetTicketDetails, postMessage, ticketList} from './debugData.js';
 
-const port = process.env.PORT || 3000;
+
+//---------------------------------------------------------------------------
+//-----------------------------------Token-----------------------------------
+//---------------------------------------------------------------------------
+//#region
 const jwtSecret = "Mys3cr3t";
 
+const jwtDecodeOptions = {
+  jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+  secretOrKey: jwtSecret,
+  issuer: "accounts.notarealplace.com",
+  audience: "mysite.net",
+};
+
+passport.use(
+  new JwtStrategy(jwtDecodeOptions, (payload, done) => {
+    return done(null, payload.data);
+  }),
+);
+//#endregion
 
 //---------------------------------------------------------------------------
 //-----------------------------CLient API server-----------------------------
 //---------------------------------------------------------------------------
+//#region
 
 const clientApp = express();
 const httpServer = createServer(clientApp);
+const port = process.env.PORT || 3000;
 
 clientApp.use(bodyParser.json());
 clientApp.use(cors({origin: "*"}));
 
+
+httpServer.listen(port, () => {
+  console.log(`Client application is running at: http://localhost:${port}`);
+});
 
 //Return user data from database.
 clientApp.get(
@@ -195,7 +218,7 @@ clientApp.post(
           }]
         }
 
-        await (await database.collection('ticket_details').insertOne(details)).insertedId.toString();
+        await (await database.collection('ticket_details').insertOne(details));
 
         res.send({data: newId});
 
@@ -218,7 +241,7 @@ clientApp.post("/createlogin", async (req, res) => {
   //If email is new create the account
   if (!userTest)
   {
-    console.log("Email not found, ok creating new")
+    console.log("client - mail not found, ok creating new")
     req.body.last_active = new Date();
     await (await database.collection('client_users').insertOne(req.body));
 
@@ -226,7 +249,7 @@ clientApp.post("/createlogin", async (req, res) => {
     res.send();
 
   } else {  //When email exist
-    console.log("Email exist, sending error");
+    console.log("client - mail exist, sending error");
     //Return conflict
     res.status(409).end();
   }
@@ -242,7 +265,7 @@ clientApp.post("/login", async (req, res) => {
 
   //Handle a password match
   if (userCred && userCred.id2 === req.body.password) {
-    console.log("authentication OK");
+    console.log("client - authentication OK");
 
     //User object to sign
     const user = {
@@ -268,35 +291,31 @@ clientApp.post("/login", async (req, res) => {
     res.json({ token });
 
   } else {
-    console.log("wrong credentials");
+    console.log("client - wrong credentials");
     //Return unautherized
     res.status(401).end();
   }
 });
-
-//---------------------------------------------------------------------------
-//-----------------------------------Token-----------------------------------
-//---------------------------------------------------------------------------
-
-const jwtDecodeOptions = {
-  jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-  secretOrKey: jwtSecret,
-  issuer: "accounts.notarealplace.com",
-  audience: "mysite.net",
-};
-
-passport.use(
-  new JwtStrategy(jwtDecodeOptions, (payload, done) => {
-    return done(null, payload.data);
-  }),
-);
+//#endregion
 
 //---------------------------------------------------------------------------
 //--------------------------Websocket Admin Server---------------------------
 //---------------------------------------------------------------------------
+//#region
+
+const adminApp = express();
+const httpAdminServer = createServer(adminApp);
+const adminPort = process.env.PORT || 4000;
+
+adminApp.use(bodyParser.json());
+adminApp.use(cors({origin: "*"}));
+
+httpAdminServer.listen(adminPort, () => {
+  console.log(`Admin application is running at: http://localhost:${adminPort}`);
+});
 
 //Creates a new account and send 200 if successfull and 409 if user email already exist in database
-clientApp.post("/createadmin", async (req, res) => {
+adminApp.post("/createlogin", async (req, res) => {
   //Initialize database
   const database = (await connection).db('ticketdb');
 
@@ -306,7 +325,7 @@ clientApp.post("/createadmin", async (req, res) => {
   //If email is new create the account
   if (!userTest)
   {
-    console.log("Email not found, ok creating new")
+    console.log("admin - email not found, ok creating new")
     req.body.last_active = new Date();
     await (await database.collection('admin_users').insertOne(req.body));
 
@@ -321,7 +340,7 @@ clientApp.post("/createadmin", async (req, res) => {
 });
 
 //Login wirh user credentials that return a token to the client
-clientApp.post("/adminlogin", async (req, res) => {
+adminApp.post("/login", async (req, res) => {
   //Initialize database
   const database =(await connection).db('ticketdb');
 
@@ -330,7 +349,7 @@ clientApp.post("/adminlogin", async (req, res) => {
 
   //Handle a password match
   if (userCred && userCred.id2 === req.body.password) {
-    console.log("authentication OK");
+    console.log("admin - authentication OK");
 
     //User object to sign
     const user = {
@@ -356,53 +375,89 @@ clientApp.post("/adminlogin", async (req, res) => {
     res.json({ token });
 
   } else {
-    console.log("wrong credentials");
+    console.log("admin - wrong credentials");
     //Return unautherized
     res.status(401).end();
   }
 });
 
-const io = new Server(httpServer, {
+const io = new Server(httpAdminServer, {
   cors: {
       origin: "*"
   }});
 
-  io.engine.use((req, res, next) => {
-    const isHandshake = req._query.sid === undefined;
-    if (isHandshake) {
-      passport.authenticate("jwt", { session: false })(req, res, next);
-    } else {
-      next();
-    }
-  });
-  
-  io.on("connection", (socket) => {
-    console.log("Attempted connect")
-    const req = socket.request;
-  
-    socket.join(`user:${req.user.id}`);
-  
-    socket.on("whoami", (cb) => {
-      cb(req.user.username);
-    });
-    socket.on("headers", (cb) => {
-      cb(ticketList);
-    });
-    socket.on("details", (id, cb) => {
-      cb(GetTicketDetails(id));
-    });
-    socket.on('pushStatus', (data) => {
-      //pushStatus(data);
-    });
-    socket.on('pushMessage', (data, cb) => {
-      cb(postMessage(data));
-    });
-      
+io.engine.use((req, res, next) => {
+  const isHandshake = req._query.sid === undefined;
+  if (isHandshake) {
+    passport.authenticate("jwt", { session: false })(req, res, next);
+  } else {
+    next();
+  }
+});
+
+io.on("connection", async (socket) => {
+  console.log("Attempted connect")
+  const req = socket.request;
+
+  //Extra layer of security preventing users to access admin services, instead of using two passports
+  const database =(await connection).db('ticketdb');
+  const userCred = await database.collection('admin_users').findOne(ObjectId.createFromHexString(req.user.id))
+  if (!userCred)
+    socket.disconnect();
+
+  socket.on("whoami", (cb) => {
+    cb(req.user.username);
   });
 
-httpServer.listen(port, () => {
-  console.log(`application is running at: http://localhost:${port}`);
+  //Send headers on request
+  socket.on("headers", async (q, cb) => {
+    //Initialize database
+    const database =(await connection).db('ticketdb');
+    
+    if (q === 'unassigned')
+      cb(await database.collection('ticket_heads').find({"admin": ""}).toArray());
+    
+    if (q === 'user')
+      cb(await database.collection('ticket_heads').find({"admin": ObjectId.createFromHexString(req.user.id)}).toArray());
+
+  });
+
+  socket.on("details", async (id, cb) => {
+    try{
+      //Initialize database
+      const database =(await connection).db('ticketdb');
+      const details = await database.collection('ticket_details').findOne(ObjectId.createFromHexString(id));
+      cb(details);
+    }
+    catch (err) { console.log(err) };
+    //cb(GetTicketDetails(id));
+  });
+  socket.on('pushStatus', (data) => {
+    //pushStatus(data);
+  });
+  socket.on('pushMessage', async (data, cb) => {
+    try{
+      //Initialize database
+      const database =(await connection).db('ticketdb');
+
+      //Adds the message to the ticket details
+      await database.collection('ticket_details').updateOne(
+        {_id: ObjectId.createFromHexString(data.id)},
+        {$push: {messages: {message: data.message, sender:req.user.id, date: new Date()}}});
+
+      //Update last activity on ticket head
+      database.collection('ticket_heads').updateOne({_id: ObjectId.createFromHexString(data.id)}, {$set: {last_event: new Date(), status: 2}});
+
+      //Update last activity on user
+      database.collection('client_users').updateOne({_id: ObjectId.createFromHexString(data.id)}, {$set: {last_active: new Date()}});
+
+      //Return the new updated ticket details
+      cb(await database.collection('ticket_details').findOne(ObjectId.createFromHexString(data.id)));
+    } catch (err) { console.log(err) };
+  });
+    
 });
+//#endregion
 
 //---------------------------------------------------------------------------
 //---------------------------------Database----------------------------------
@@ -419,5 +474,3 @@ const mongoClient = new MongoClient(mongoUrlLocal);
 
 const connection = mongoClient.connect();
 
-
-//const dbconnection = mongoConnect();

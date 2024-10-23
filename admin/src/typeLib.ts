@@ -7,7 +7,7 @@ export enum status {
 }
 
 export interface ITicketHeadData {
-    id: string;
+    _id: string;
     status: status;
     date: number;
     lastEvent: number;
@@ -15,7 +15,7 @@ export interface ITicketHeadData {
 }
 
 export interface ITicketDetailData {
-    id: string;
+    _id: string;
     messages: IMessage[];
 }
 
@@ -33,8 +33,8 @@ export interface IServerToClientEvents {
   
  export interface IClientToServerEvents {
     hello: () => void;
-    headers: (callback: (e: {data: ITicketHeadData[]}) => void) => void;
-    details: (id: string, callback: (e: {data: ITicketDetailData}) => void) => void;
+    headers: (q: string, callback: (data: ITicketHeadData[]) => void) => void;
+    details: (id: string, callback: (data: ITicketDetailData) => void) => void;
     pushStatus: (data: {id: string, status: status}) => void
-    pushMessage: (data: {id: string, message: string}, callback: (e: {data: ITicketDetailData}) => void) => void
+    pushMessage: (data: {id: string, message: string}, callback: (data: ITicketDetailData) => void) => void
   }
