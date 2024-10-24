@@ -12,6 +12,7 @@ export interface ITicketHeadData {
     date: number;
     lastEvent: number;
     subject: string;
+    admin: string;
 }
 
 export interface ITicketDetailData {
@@ -33,7 +34,7 @@ export interface IServerToClientEvents {
   
  export interface IClientToServerEvents {
     hello: () => void;
-    headers: (q: string, callback: (data: ITicketHeadData[]) => void) => void;
+    headers: (callback: (data: ITicketHeadData[]) => void) => void;
     details: (id: string, callback: (data: ITicketDetailData) => void) => void;
     pushStatus: (data: {id: string, status: status}) => void
     pushMessage: (data: {id: string, message: string}, callback: (data: ITicketDetailData) => void) => void

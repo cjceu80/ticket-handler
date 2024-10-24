@@ -410,15 +410,11 @@ io.on("connection", async (socket) => {
   });
 
   //Send headers on request
-  socket.on("headers", async (q, cb) => {
+  socket.on("headers", async (cb) => {
     //Initialize database
     const database =(await connection).db('ticketdb');
     
-    if (q === 'unassigned')
-      cb(await database.collection('ticket_heads').find({"admin": ""}).toArray());
-    
-    if (q === 'user')
-      cb(await database.collection('ticket_heads').find({"admin": ObjectId.createFromHexString(req.user.id)}).toArray());
+      cb(await database.collection('ticket_heads').find({$or: [{"admin": ""},{"admin": ObjectId.createFromHexString(req.user.id)}]}).toArray());
 
   });
 
@@ -473,4 +469,3 @@ const mongoUrlDocker = "mongodb://admin:password@mongodb";
 const mongoClient = new MongoClient(mongoUrlLocal);
 
 const connection = mongoClient.connect();
-

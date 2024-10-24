@@ -10,7 +10,7 @@ const Header: React.FC<ClickCallback> = ( {onClick}) => {
     return(
         <Navbar className="bg-body-secondary">
             <Container>
-                <Navbar.Brand><h1>Tickets for ...</h1></Navbar.Brand>
+                <Navbar.Brand><h1>Admin dashboard</h1></Navbar.Brand>
                 <Button onClick={()=>onClick()}>Logout</Button>
             </Container>
         </Navbar>
