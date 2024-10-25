@@ -24,4 +24,5 @@ export interface IMessage {
     date: Date;
     message: string;
     sender: string;
+    sender_name: string;
 }

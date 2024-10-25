@@ -9,6 +9,7 @@ import cors from 'cors';
 import { MongoClient, ObjectId } from "mongodb";
 
 import {GetTicketDetails, postMessage, ticketList} from './debugData.js';
+import { send } from "node:process";
 
 
 //---------------------------------------------------------------------------
@@ -45,7 +46,7 @@ clientApp.use(cors({origin: "*"}));
 
 
 httpServer.listen(port, () => {
-  console.log(`Client application is running at: http://localhost:${port}`);
+  console.log(`${new Date().toLocaleString()} - Client application is running at: http://localhost:${port}`);
 });
 
 //Return user data from database.
@@ -73,7 +74,7 @@ clientApp.get(
         const database =(await connection).db('ticketdb');
 
         //Gets all ticket heads user owns
-        const heads = await database.collection('ticket_heads').find({"owner": req.user.id}).toArray();
+        const heads = await database.collection('ticket_heads').find({"owner": ObjectId.createFromHexString(req.user.id)}).toArray();
 
         //Update the users last activity
         database.collection('client_users').updateOne({_id: ObjectId.createFromHexString(req.user.id)}, {$set: {last_active: new Date}});
@@ -144,7 +145,6 @@ clientApp.post(
       try{
         //Initialize database
         const database =(await connection).db('ticketdb');
-
         //Updates the ticket head status
         database.collection('ticket_heads').updateOne({_id: ObjectId.createFromHexString(req.params.id)}, {$set: {status: req.body.status}});
       }
@@ -170,13 +170,17 @@ clientApp.post(
         //Adds the message to the ticket details
         await database.collection('ticket_details').updateOne(
           {_id: ObjectId.createFromHexString(req.params.id)},
-          {$push: {messages: {message: req.body.message, sender:req.user.id, date: new Date()}}});
+          {$push: {messages: {message: req.body.message, sender:ObjectId.createFromHexString(req.user.id), sender_name: req.user.name, date: new Date()}}});
 
         //Update last activity on ticket head
-        database.collection('ticket_heads').updateOne({_id: ObjectId.createFromHexString(req.params.id)}, {$set: {last_event: new Date()}});
+        database.collection('ticket_heads').updateOne({_id: ObjectId.createFromHexString(req.params.id)}, {$set: {last_event: new Date(), status: 1}});
 
         //Update last activity on user
         database.collection('client_users').updateOne({_id: ObjectId.createFromHexString(req.user.id)}, {$set: {last_active: new Date()}});
+
+        //sends for admins heads to update if connected
+        const head = database.collection('ticket_heads').findOne(ObjectId.createFromHexString(req.params.id))
+        io.in(head.admin).emit('updateHeaders')
 
         //Return the new updated ticket details
         res.send(await database.collection('ticket_details').findOne(ObjectId.createFromHexString(req.params.id)));
@@ -203,7 +207,7 @@ clientApp.post(
           status: 1,
           date: newDate,
           last_event: newDate,
-          owner: req.user.id,
+          owner: ObjectId.createFromHexString(req.user.id),
           admin: "",
           subject: req.body.subject,
         }
@@ -214,11 +218,15 @@ clientApp.post(
           messages:[{
             date: newDate,
             message: req.body.message,
-            sender: req.user.id,
+            sender: ObjectId.createFromHexString(req.user.id),
+            sender_name: req.user.name
           }]
         }
 
         await (await database.collection('ticket_details').insertOne(details));
+
+        //Sends to all connected admins to update headers
+        io.emit('updateHeaders')
 
         res.send({data: newId});
 
@@ -241,7 +249,7 @@ clientApp.post("/createlogin", async (req, res) => {
   //If email is new create the account
   if (!userTest)
   {
-    console.log("client - mail not found, ok creating new")
+    console.log(`${new Date().toLocaleString()} - Client - mail not found, ok creating new`)
     req.body.last_active = new Date();
     await (await database.collection('client_users').insertOne(req.body));
 
@@ -249,7 +257,7 @@ clientApp.post("/createlogin", async (req, res) => {
     res.send();
 
   } else {  //When email exist
-    console.log("client - mail exist, sending error");
+    console.log(`${new Date().toLocaleString()} - Client - mail exist, sending error`);
     //Return conflict
     res.status(409).end();
   }
@@ -265,7 +273,7 @@ clientApp.post("/login", async (req, res) => {
 
   //Handle a password match
   if (userCred && userCred.id2 === req.body.password) {
-    console.log("client - authentication OK");
+    console.log(`${new Date().toLocaleString()} - Client - authentication OK`);
 
     //User object to sign
     const user = {
@@ -291,7 +299,7 @@ clientApp.post("/login", async (req, res) => {
     res.json({ token });
 
   } else {
-    console.log("client - wrong credentials");
+    console.log(`${new Date().toLocaleString()} - Client - wrong credentials`);
     //Return unautherized
     res.status(401).end();
   }
@@ -311,7 +319,7 @@ adminApp.use(bodyParser.json());
 adminApp.use(cors({origin: "*"}));
 
 httpAdminServer.listen(adminPort, () => {
-  console.log(`Admin application is running at: http://localhost:${adminPort}`);
+  console.log(`${new Date().toLocaleString()} - Admin application is running at: http://localhost:${adminPort}`);
 });
 
 //Creates a new account and send 200 if successfull and 409 if user email already exist in database
@@ -325,7 +333,7 @@ adminApp.post("/createlogin", async (req, res) => {
   //If email is new create the account
   if (!userTest)
   {
-    console.log("admin - email not found, ok creating new")
+    console.log(`${new Date().toLocaleString()} - Admin - email not found, ok creating new`)
     req.body.last_active = new Date();
     await (await database.collection('admin_users').insertOne(req.body));
 
@@ -333,7 +341,7 @@ adminApp.post("/createlogin", async (req, res) => {
     res.send();
 
   } else {  //When email exist
-    console.log("Email exist, sending error");
+    console.log(`${new Date().toLocaleString()} - Admin - email exist, sending error`);
     //Return conflict
     res.status(409).end();
   }
@@ -349,7 +357,7 @@ adminApp.post("/login", async (req, res) => {
 
   //Handle a password match
   if (userCred && userCred.id2 === req.body.password) {
-    console.log("admin - authentication OK");
+    console.log(`${new Date().toLocaleString()} - Admin - authentication OK`);
 
     //User object to sign
     const user = {
@@ -375,7 +383,7 @@ adminApp.post("/login", async (req, res) => {
     res.json({ token });
 
   } else {
-    console.log("admin - wrong credentials");
+    console.log(`${new Date().toLocaleString()} - Admin - wrong credentials`);
     //Return unautherized
     res.status(401).end();
   }
@@ -396,50 +404,65 @@ io.engine.use((req, res, next) => {
 });
 
 io.on("connection", async (socket) => {
-  console.log("Attempted connect")
   const req = socket.request;
+  
+  //Initialize database
+  const database =(await connection).db('ticketdb');
 
   //Extra layer of security preventing users to access admin services, instead of using two passports
-  const database =(await connection).db('ticketdb');
   const userCred = await database.collection('admin_users').findOne(ObjectId.createFromHexString(req.user.id))
-  if (!userCred)
+  if (!userCred){
     socket.disconnect();
+    console.log(`${new Date().toLocaleString()} - ${req.user.username} attempted unauthorized admin access - connection denied`)
+  }
+
+  console.log(`${new Date().toLocaleString()} - Admin ${req.user.username} has connected`)
+
+  //Joins own channel
+  socket.join(req.user.user);
 
   socket.on("whoami", (cb) => {
-    cb(req.user.username);
+    cb(req.user.id);
   });
 
   //Send headers on request
   socket.on("headers", async (cb) => {
-    //Initialize database
-    const database =(await connection).db('ticketdb');
-    
       cb(await database.collection('ticket_heads').find({$or: [{"admin": ""},{"admin": ObjectId.createFromHexString(req.user.id)}]}).toArray());
-
   });
 
   socket.on("details", async (id, cb) => {
     try{
-      //Initialize database
-      const database =(await connection).db('ticketdb');
       const details = await database.collection('ticket_details').findOne(ObjectId.createFromHexString(id));
+      
       cb(details);
     }
     catch (err) { console.log(err) };
-    //cb(GetTicketDetails(id));
+
   });
+
   socket.on('pushStatus', (data) => {
-    //pushStatus(data);
+    try{
+      database.collection('ticket_heads').updateOne({_id: ObjectId.createFromHexString(data.id)}, {$set: {status: data.status}});
+      io.emit('updateHeaders');
+    }
+    catch (err) { console.log(err) };
   });
+
+  socket.on('acceptTicket', async (id) => {
+    try{
+      await database.collection('ticket_heads').updateOne({_id: ObjectId.createFromHexString(id)}, {$set: {admin: ObjectId.createFromHexString(req.user.id)}});
+      
+      io.emit('updateHeaders');
+    }
+    catch (err) { console.log(err) };
+  });
+
   socket.on('pushMessage', async (data, cb) => {
     try{
-      //Initialize database
-      const database =(await connection).db('ticketdb');
-
       //Adds the message to the ticket details
       await database.collection('ticket_details').updateOne(
         {_id: ObjectId.createFromHexString(data.id)},
-        {$push: {messages: {message: data.message, sender:req.user.id, date: new Date()}}});
+        {$push: {messages: {message: data.message, sender: ObjectId.createFromHexString(req.user.id), sender_name: req.user.name, date: new Date()}}});
 
       //Update last activity on ticket head
       database.collection('ticket_heads').updateOne({_id: ObjectId.createFromHexString(data.id)}, {$set: {last_event: new Date(), status: 2}});

@@ -4,7 +4,7 @@ import {io, Socket} from 'socket.io-client';
 import Login from './components/Login'
 import Header from './components/Header';
 import TicketBody from './components/TicketBody';
-import { ITicketHeadData, IServerToClientEvents, IClientToServerEvents } from './typeLib';
+import { ITicketHeadData, IServerToClientEvents, IClientToServerEvents, status } from './typeLib';
 import TicketList from './components/TicketList';
 import About from './components/About';
 
@@ -21,15 +21,23 @@ export default function App() {
   const [isLoged, setIsLoged] = useState(false);
   const [selectedId, setSelectedId] = useState("");
   const [headerData, setHeaderData] = useState<ITicketHeadData[]>();
+  const [selectedTab, setSelectedTab] = useState<number>(initSelectedTab);
 
   //Loading headers on socket connect.
   useEffect(() => {
     socket.on('connect', () => {
       console.log("connected");
       setIsLoged(true);
+      socket.emit('whoami', (id) => {sessionStorage.setItem('id', id)})
       socket.emit('headers', (data) => {setHeaderData(data)});
     });
   }, []);
+
+  useEffect(() => {
+  socket.on('updateHeaders', ()=>{
+    socket.emit('headers', (data) => {setHeaderData(data)});
+  });
+  }, [headerData]);
 
   //Using API to fetch a credential token.
   async function handleLogin(user: string, password: string) {
@@ -48,6 +56,7 @@ export default function App() {
     if (res.status === 200) {
       const { token } = await res.json();
       sessionStorage.setItem('token', token);
+      //sessionStorage.setItem('name', data.name)
       window.location.reload();
     }
     else setIsLoged(false);
@@ -55,9 +64,9 @@ export default function App() {
 
   //Disconnects from socket and clear the credential token.
   function handleLogout() {
-    console.log("trying to disconnect")
     socket.disconnect();
-    sessionStorage.removeItem('token')
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('name');
     setIsLoged(false);
   };
 
@@ -66,15 +75,31 @@ export default function App() {
       setSelectedId(id)
   }
 
+  function handleEmitStatus(id: string, status: status){
+    socket.emit('pushStatus', {id: id, status: status})
+  }
+
+  function initSelectedTab(){
+    const tab = sessionStorage.getItem('selectedTab');
+    if (!tab)
+      return 0;
+    else return parseInt(tab);
+  }
+
+  function handleSelectedTab(tab: number){
+    sessionStorage.setItem('selectedTab', tab.toString())
+    setSelectedTab(tab)
+  }
+
   return (
     <>
       {!isLoged ? <Login onClick={handleLogin}/> : null}
       <Header onClick={handleLogout}/>
         <Row>
-          <TicketList headerData={headerData!} selectedId={selectedId} onClick={handleItemClicked}/>
+          <TicketList headerData={headerData!} tabSwitchCallback={handleSelectedTab} selectedTab={selectedTab} selectedId={selectedId} onClick={handleItemClicked} emitStatus={handleEmitStatus}/>
           <Col md={6}>
               <Container>
-      {selectedId != ""  ? <TicketBody socket={socket} headData={headerData!.find((element => element._id == selectedId))} id={selectedId}/> : <About />}
+      {selectedId != ""  ? <TicketBody socket={socket} headData={headerData!.find((element => element._id == selectedId))} tabSwitchCallback={handleSelectedTab} id={selectedId}/> : <About />}
               </Container>
           </Col>
         </Row>

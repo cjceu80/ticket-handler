@@ -16,7 +16,7 @@ const TicketMessage: React.FC<TTicketMessageProps> = ({message}) => {
           <Card>
             <Card.Header className="d-flex justify-content-between">
               <small>
-                {sessionStorage.getItem('id') == message.sender ? sessionStorage.getItem('name') : message.sender}
+                {message.sender_name}
               </small>
               <small>
                 {new Date(message.date).toLocaleString('en', {timeZone: import.meta.env.VITE_TZ})}

@@ -8,16 +8,20 @@ type TicketBodyProps = {
   id: string;
   headData: ITicketHeadData | undefined;
   socket: Socket<IServerToClientEvents, IClientToServerEvents>;
+  tabSwitchCallback: (tab: number) => void;
 }
 
 //Render the body where messages are handled.
-const TicketBody: React.FC<TicketBodyProps> = ({headData, id, socket}) => {
+const TicketBody: React.FC<TicketBodyProps> = ({headData, id, socket, tabSwitchCallback}) => {
   const [detailedData, setDetailedData] = useState<ITicketDetailData>({_id: "", messages: []});
   const [lastId, setLastID] = useState<string>("");
   const [formText, setFormText] = useState<string>("");
+  const [checkboxVisible, setCheckboxVisible] = useState(false);
+  const [checkboxState, setCheckboxState] = useState(false);
 
   //Triggers hook to reload when selected item is changed.    qq<Might be redundant later>
   if (id != lastId){
+    setFormText("");
     setLastID(id);}
 
   //Loads ticket details and changes status when unread is view.
@@ -40,6 +44,18 @@ const TicketBody: React.FC<TicketBodyProps> = ({headData, id, socket}) => {
     setFormText("");
   }
 
+  function handleAccept() {
+    sessionStorage.setItem("selectedTab", "1");
+    socket.emit('acceptTicket', id);
+    tabSwitchCallback(1);
+  }
+
+  function handleResolveClick(){
+    if (checkboxVisible && checkboxState && formText != "")
+      socket.emit('pushStatus', {id: headData!._id, status: status.RESOLVED})
+    else setCheckboxVisible(true);
+  }
+
   return(
     <Container>
       <Row className="mt-4">
@@ -47,21 +63,30 @@ const TicketBody: React.FC<TicketBodyProps> = ({headData, id, socket}) => {
           <h3>{headData!.subject != undefined ? headData!.subject : "No subject submitted."}</h3>
         </Col>
       </Row>
-      {detailedData.messages.map((element, index) => <TicketMessage key={new Date(element.date).toISOString()+index} message={element}/>)}
-      <Row>
+      {detailedData.messages.map((element, index) => <TicketMessage key={new Date(element.date).toLocaleString()+index} message={element}/>)}
+      <Row hidden={headData?.status == status.RESOLVED || headData?.admin === ""}>
         <Col xs={2}></Col>
         <Col sx={10}>
-          <Card hidden={headData?.status == status.RESOLVED}>
+          <Card>
             <Card.Header className="d-flex justify-content-between"><small>Enter response:</small></Card.Header>
             <Card.Body>
               <Form>
                 <Form.Control as="textarea" rows={5} value={formText} onChange={(e) => setFormText(e.target.value)}/>
                 <Button role="submit" onClick={() => handleSubmit()} disabled={formText == ""}>Submit</Button>
+                <div className="justify-items-between">
+                  
+                <Button disabled={checkboxVisible && !checkboxState} onClick={() => handleResolveClick()}>Resolve</Button>
+                { checkboxVisible ?
+                  <Form.Check className="ms-2" inline label="Are you sure you want to resolve the ticket?" checked={checkboxState} onChange={(e) =>{ setCheckboxState(e.target.checked)}}/> : null }
+                </div>
               </Form>
             </Card.Body>
           </Card>
+          
         </Col>
       </Row>
+            <Button hidden={headData?.admin != ""} role="submit" onClick={() => handleAccept()}>Accept ticket</Button>
+
     </Container>
   );
 }
