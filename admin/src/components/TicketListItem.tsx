@@ -17,12 +17,11 @@ const TicketListItem: React.FC<ListItemProps> = ({data, selectedId, openTab, onC
     
     //Handles the onClick on the tickets list entry
     function handleClick() {
-        //Even though the status change is pushed in parent, this will make the visual change without doing a reload. 
+        //pushes status change if needed. 
         if (data!.status == status.ADMIN_NEW){
             data!.status = status.ACTIVE;
             emitStatus(data._id, status.ACTIVE);
         }
-
             onClick(data._id)
     }
 

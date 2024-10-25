@@ -19,7 +19,7 @@ const TicketBody: React.FC<TicketBodyProps> = ({headData, id, socket, tabSwitchC
   const [checkboxVisible, setCheckboxVisible] = useState(false);
   const [checkboxState, setCheckboxState] = useState(false);
 
-  //Triggers hook to reload when selected item is changed.    qq<Might be redundant later>
+  //Triggers hook to reload when selected item is changed. 
   if (id != lastId){
     setFormText("");
     setLastID(id);}
@@ -44,12 +44,13 @@ const TicketBody: React.FC<TicketBodyProps> = ({headData, id, socket, tabSwitchC
     setFormText("");
   }
 
+  //Submit the admin change and selects the "my tickets" tab
   function handleAccept() {
-    sessionStorage.setItem("selectedTab", "1");
     socket.emit('acceptTicket', id);
     tabSwitchCallback(1);
   }
 
+  //Handles the safety check for resolving.
   function handleResolveClick(){
     if (checkboxVisible && checkboxState && formText != "")
       socket.emit('pushStatus', {id: headData!._id, status: status.RESOLVED})

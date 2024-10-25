@@ -33,6 +33,7 @@ export default function App() {
     });
   }, []);
 
+  //Listen for uppdates from the server
   useEffect(() => {
   socket.on('updateHeaders', ()=>{
     socket.emit('headers', (data) => {setHeaderData(data)});
@@ -52,7 +53,7 @@ export default function App() {
       })
     })
 
-    //Store token if recieved.      TODO<Should add fail handling>
+    //Store token if recieved. 
     if (res.status === 200) {
       const { token } = await res.json();
       sessionStorage.setItem('token', token);
@@ -75,10 +76,12 @@ export default function App() {
       setSelectedId(id)
   }
 
+  //Callback for status emits
   function handleEmitStatus(id: string, status: status){
     socket.emit('pushStatus', {id: id, status: status})
   }
 
+  //sets tab to stored value. Prevents errors if no value is set
   function initSelectedTab(){
     const tab = sessionStorage.getItem('selectedTab');
     if (!tab)
@@ -86,6 +89,7 @@ export default function App() {
     else return parseInt(tab);
   }
 
+  //Callback to handle tab changes
   function handleSelectedTab(tab: number){
     sessionStorage.setItem('selectedTab', tab.toString())
     setSelectedTab(tab)
