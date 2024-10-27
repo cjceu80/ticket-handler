@@ -25,6 +25,10 @@ dist-ssr
 *.sln
 *.sw?
 
+*.suo
+*.user
+*.sln.docstates
+
 /server
 /win_admin/bin
 /win_admin/obj
