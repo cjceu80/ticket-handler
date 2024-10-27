@@ -26,5 +26,6 @@ dist-ssr
 *.sw?
 
 /server
+/win_admin/bin
 .env
 todo.txt
