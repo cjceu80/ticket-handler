@@ -266,6 +266,7 @@ clientApp.post("/createlogin", async (req, res) => {
 //Login wirh user credentials that return a token to the client
 clientApp.post("/login", async (req, res) => {
   //Initialize database
+
   const database =(await connection).db('ticketdb');
 
   //Gets the users information
@@ -350,6 +351,8 @@ adminApp.post("/createlogin", async (req, res) => {
 //Login wirh user credentials that return a token to the client
 adminApp.post("/login", async (req, res) => {
   //Initialize database
+  console.log(req.body);
+
   const database =(await connection).db('ticketdb');
 
   //Gets the users information
