@@ -8,8 +8,6 @@ import bodyParser from "body-parser";
 import cors from 'cors';
 import { MongoClient, ObjectId } from "mongodb";
 
-import {GetTicketDetails, postMessage, ticketList} from './debugData.js';
-import { send } from "node:process";
 
 
 //---------------------------------------------------------------------------
@@ -430,6 +428,7 @@ io.on("connection", async (socket) => {
 
   //Send headers on request
   socket.on("headers", async (cb) => {
+    console.log("headers")
       cb(await database.collection('ticket_heads').find({$or: [{"admin": ""},{"admin": ObjectId.createFromHexString(req.user.id)}]}).toArray());
   });
 
