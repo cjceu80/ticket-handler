@@ -491,6 +491,6 @@ const mongoUrlLocal = "mongodb://admin:password@localhost:27017";
 // use when starting application as docker container
 const mongoUrlDocker = "mongodb://admin:password@mongodb";
 
-const mongoClient = new MongoClient(mongoUrlLocal);
+const mongoClient = new MongoClient(mongoUrlDocker);
 
 const connection = mongoClient.connect();
