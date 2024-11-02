@@ -42,7 +42,7 @@ export default function App() {
 
   //Using API to fetch a credential token.
   async function handleLogin(user: string, password: string) {
-    const res = await fetch(`${import.meta.env.VITE_SERVER}/login`, {
+    const res = await fetch(`${import.meta.env.VITE_SERVER}/api/login`, {
       method: 'post',
       headers: {
           'content-type': 'application/json'

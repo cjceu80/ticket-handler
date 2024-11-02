@@ -1,4 +1,9 @@
 services:
+  server:
+    image: 402611660324.dkr.ecr.eu-north-1.amazonaws.com/server:1.6
+    ports:
+      - 80:3000
+      - 8080:4000
   mongodb:
     image: mongo
     ports:

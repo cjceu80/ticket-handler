@@ -36,7 +36,7 @@ const Login: React.FC<TLoginProps> = ({onClick}) => {
             return;
 
         //Attempt to create a new account
-        const response = await fetch(`${import.meta.env.VITE_SERVER}/createlogin`, {
+        const response = await fetch(`${import.meta.env.VITE_SERVER}/api/createlogin`, {
             method: 'post',
             headers: {
                 'content-type': 'application/json'

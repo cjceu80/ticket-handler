@@ -1,5 +1,7 @@
 import express from "express";
 import { createServer } from "node:http";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { Server } from "socket.io";
 import passport from "passport";
 import { Strategy as JwtStrategy, ExtractJwt } from "passport-jwt";
@@ -42,6 +44,13 @@ const port = process.env.PORT || 3000;
 clientApp.use(bodyParser.json());
 clientApp.use(cors({origin: "*"}));
 
+const __filename = fileURLToPath(import.meta.url);
+
+// 👇️ "/home/john/Desktop/javascript"
+const __dirname = path.dirname(__filename);
+
+clientApp.use(express.static(path.join(__dirname, 'dist/client')));
+
 
 httpServer.listen(port, () => {
   console.log(`${new Date().toLocaleString()} - Client application is running at: http://localhost:${port}`);
@@ -49,7 +58,7 @@ httpServer.listen(port, () => {
 
 //Return user data from database.
 clientApp.get(
-  "/self",
+  "/api/self",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
     if (req.user) {
@@ -62,7 +71,7 @@ clientApp.get(
 
 //Returns all ticket heads from database
 clientApp.get(
-  "/headers",
+  "/api/headers",
   passport.authenticate("jwt", { session: false }),    
   async (req, res) => {
     //Check for autherized user
@@ -90,7 +99,7 @@ clientApp.get(
 
 //Return a header for given ticket id
 clientApp.get(
-  "/header/:id",
+  "/api/header/:id",
   passport.authenticate("jwt", { session: false }),
   async (req, res) => {
     
@@ -112,7 +121,7 @@ clientApp.get(
 
 //Return all detailed data from ticket by provided id in the params. 
 clientApp.get(
-  "/details/:id",
+  "/api/details/:id",
   passport.authenticate("jwt", { session: false }),
   async (req, res) => {
     
@@ -134,7 +143,7 @@ clientApp.get(
 
 //Updates the status on a ticket head. Used for when a user open an un-opened message
 clientApp.post(
-  "/status/:id",
+  "/api/status/:id",
   passport.authenticate("jwt", { session: false }),
   async (req, res) => {
 
@@ -155,7 +164,7 @@ clientApp.post(
 );
 
 clientApp.post(
-  "/details/:id",
+  "/api/details/:id",
   passport.authenticate("jwt", { session: false }),
   async (req, res) => {
 
@@ -191,7 +200,7 @@ clientApp.post(
 );
 
 clientApp.post(
-  "/message",
+  "/api/message",
   passport.authenticate("jwt", { session: false }),
   async (req, res) => {
 
@@ -237,7 +246,7 @@ clientApp.post(
 );
 
 //Creates a new account and send 200 if successfull and 409 if user email already exist in database
-clientApp.post("/createlogin", async (req, res) => {
+clientApp.post("/api/createlogin", async (req, res) => {
   //Initialize database
   const database = (await connection).db('ticketdb');
 
@@ -262,7 +271,7 @@ clientApp.post("/createlogin", async (req, res) => {
 });
 
 //Login wirh user credentials that return a token to the client
-clientApp.post("/login", async (req, res) => {
+clientApp.post("/api/login", async (req, res) => {
   //Initialize database
 
   const database =(await connection).db('ticketdb');
@@ -303,6 +312,10 @@ clientApp.post("/login", async (req, res) => {
     res.status(401).end();
   }
 });
+
+clientApp.get('*', (req,res) => {
+  res.sendFile(path.join(__dirname, 'dist/client/index.html'));
+ });
 //#endregion
 
 //---------------------------------------------------------------------------
@@ -317,12 +330,15 @@ const adminPort = process.env.PORT || 4000;
 adminApp.use(bodyParser.json());
 adminApp.use(cors({origin: "*"}));
 
+adminApp.use(express.static(path.join(__dirname, 'dist/admin')));
+
 httpAdminServer.listen(adminPort, () => {
   console.log(`${new Date().toLocaleString()} - Admin application is running at: http://localhost:${adminPort}`);
 });
 
+
 //Creates a new account and send 200 if successfull and 409 if user email already exist in database
-adminApp.post("/createlogin", async (req, res) => {
+adminApp.post("/api/createlogin", async (req, res) => {
   //Initialize database
   const database = (await connection).db('ticketdb');
 
@@ -347,7 +363,7 @@ adminApp.post("/createlogin", async (req, res) => {
 });
 
 //Login wirh user credentials that return a token to the client
-adminApp.post("/login", async (req, res) => {
+adminApp.post("/api/login", async (req, res) => {
   //Initialize database
   console.log(req.body);
 
@@ -478,6 +494,10 @@ io.on("connection", async (socket) => {
   });
     
 });
+
+adminApp.get('*', (req,res) => {
+  res.sendFile(path.join(__dirname, 'dist/admin/index.html'));
+ });
 //#endregion
 
 //---------------------------------------------------------------------------
